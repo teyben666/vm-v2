@@ -98,7 +98,7 @@ The Telegram dashboard shows:
 
 ### Prerequisites
 - Windows 10/11 with Hyper-V enabled
-- Python 3.10+
+- Python 3.10+ (python-3.10.11-amd64.exe)
 - Telegram bot token (get from @BotFather)
 - Network with Router + Host + VMs on same LAN (e.g., 192.168.1.x)
 
