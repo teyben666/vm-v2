@@ -172,9 +172,11 @@ python -m src.main
 /stop_vm <id> - Graceful shutdown (detector executes)
 /force_stop <id> - Force shutdown (hypervisor executes)
 /users - List all registered users
+/approve <user_id> - Approve pending user as regular user
 /ban <user_id> - Ban user
 /pardon <user_id> - Unban user
 /promote <user_id> - Make user admin
+/delete_user <user_id> - Delete user permanently
 /token <secret> - Become admin with secret token
 ```
 
