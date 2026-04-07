@@ -1,0 +1,5 @@
+httpx==0.25.0
+python-dotenv==1.0.0
+pynput==1.7.6
+watchdog==3.0.0
+pyinstaller==6.1.0
