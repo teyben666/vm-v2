@@ -8,12 +8,19 @@ REM First, install all dependencies from requirements.txt
 echo Installing dependencies...
 python -m pip install -r requirements.txt
 
+REM Ensure watchdog is properly installed
+python -m pip install watchdog --force-reinstall
+
 REM Check if PyInstaller is installed
 python -m pip show pyinstaller >nul 2>&1
 if errorlevel 1 (
     echo Installing PyInstaller...
     python -m pip install pyinstaller
 )
+
+REM Clean old builds
+if exist build rmdir /s /q build
+if exist dist rmdir /s /q dist
 
 REM Build executable
 REM --onefile: Single standalone executable
@@ -29,8 +36,11 @@ pyinstaller ^
     --specpath ./build ^
     --collect-all watchdog ^
     --collect-all httpx ^
-    --collect-all pynput ^
+    --hidden-import=watchdog ^
+    --hidden-import=watchdog.observers ^
     --hidden-import=watchdog.observers.polling ^
+    --hidden-import=watchdog.events ^
+    --hidden-import=httpx ^
     src/main.py
 
 if errorlevel 1 (
