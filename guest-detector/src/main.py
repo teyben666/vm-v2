@@ -76,6 +76,7 @@ class DetectorLoop:
                 self.running = False
             except Exception as e:
                 logger.error(f"Tick error: {e}", exc_info=True)
+                self.stop()  # Clean up resources on error
                 await asyncio.sleep(HEARTBEAT_INTERVAL)
 
     async def _tick(self):
@@ -87,19 +88,20 @@ class DetectorLoop:
         is_idle = self.idle_checker.check_idle(parsec_connected=parsec_connected)
         
         # Update AFK tracking
+        current_time = datetime.now()
         if is_idle:
             if self.afk_start_time is None:
-                self.afk_start_time = datetime.now()
+                self.afk_start_time = current_time
                 logger.info("User went AFK")
         else:
             if self.afk_start_time is not None:
-                duration = (datetime.now() - self.afk_start_time).total_seconds() / 60
+                duration = (current_time - self.afk_start_time).total_seconds() / 60
                 logger.info(f"User returned from {duration:.1f}min AFK")
             self.afk_start_time = None
 
-        # Calculate AFK duration
+        # Calculate AFK duration (reuse current_time for consistency and efficiency)
         if self.afk_start_time:
-            afk_duration = (datetime.now() - self.afk_start_time).total_seconds() / 60
+            afk_duration = (current_time - self.afk_start_time).total_seconds() / 60
         else:
             afk_duration = 0
 
@@ -121,6 +123,16 @@ class DetectorLoop:
             logger.warning(
                 f"Auto-shutdown triggered: AFK for {afk_duration:.1f}min, Parsec disconnected"
             )
+            # Send final heartbeat before shutdown
+            try:
+                await self.api_sender.send_heartbeat(
+                    afk=is_idle,
+                    afk_duration_minutes=int(afk_duration),
+                    parsec_connected=parsec_connected
+                )
+            except Exception as e:
+                logger.warning(f"Could not send final heartbeat: {e}")
+            
             await self.api_sender.send_shutdown_imminent()
             await asyncio.sleep(2)
             self.os_manager.graceful_shutdown(300)  # 5 minute warning
@@ -159,8 +171,12 @@ class DetectorLoop:
             logger.warning(f"Unknown command: {command}")
 
     def stop(self):
-        """Stop the detector."""
+        """Stop the detector and clean up resources."""
         self.running = False
+        try:
+            self.parsec_reader.stop()  # Clean up file watcher
+        except Exception as e:
+            logger.warning(f"Error stopping Parsec reader: {e}")
         logger.info("Detector stopped")
 
 

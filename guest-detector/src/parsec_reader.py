@@ -116,15 +116,27 @@ class ParsecReader:
         """Check if Parsec is currently connected.
         
         Returns:
-            True if connected and recently updated, False otherwise
+            True if connected and log is recently updated, False otherwise
         """
-        # If connection status hasn't been updated in 2+ minutes, assume disconnected
-        # (handles cases where log stops updating)
-        if self.handler.connected:
-            time_since_update = datetime.now() - self.handler.last_update
-            if time_since_update > timedelta(minutes=2):
-                logger.debug(f"Parsec status stale ({time_since_update.total_seconds():.0f}s old) - assuming disconnected")
-                return False
+        # If log shows disconnected, definitely return False
+        if not self.handler.connected:
+            return False
+        
+        # If connected, verify log file is receiving updates
+        # (Parsec actively logs data during connection, updates are a sign of active session)
+        log_path = os.getenv("PARSEC_LOG_PATH")
+        if log_path and os.path.exists(log_path):
+            try:
+                log_mod_time = datetime.fromtimestamp(os.path.getmtime(log_path))
+                time_since_log_update = datetime.now() - log_mod_time
+                
+                # If log hasn't been updated in 5 minutes, likely disconnected
+                if time_since_log_update > timedelta(minutes=5):
+                    logger.debug(f"Parsec log stale ({time_since_log_update.total_seconds():.0f}s old) - assuming disconnected")
+                    self.handler.connected = False
+                    return False
+            except Exception as e:
+                logger.warning(f"Could not check log file timestamp: {e}")
         
         return self.handler.connected
 
@@ -133,22 +145,4 @@ class ParsecReader:
         if self.observer:
             self.observer.stop()
             self.observer.join()
-
-
-# Test fallback for systems without Parsec
-def _get_parsec_via_process() -> bool:
-    """Fallback: Check if Parsec process is running.
-    
-    This is less reliable than log monitoring but works as backup.
-    """
-    try:
-        import subprocess
-        result = subprocess.run(
-            ["tasklist", "/FI", "IMAGENAME eq parsec.exe"],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        return "parsec.exe" in result.stdout.lower()
-    except Exception:
-        return False
+# Log timestamp verification is now integrated in is_connected()

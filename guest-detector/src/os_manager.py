@@ -63,10 +63,6 @@ class OSManager:
             logger.error(f"Exception during shutdown: {str(e)}")
             return False
 
-        except Exception as e:
-            logger.error(f"Error executing shutdown: {e}")
-            return False
-
     @staticmethod
     def cancel_shutdown() -> bool:
         """Cancel pending shutdown.
