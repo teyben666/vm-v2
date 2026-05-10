@@ -8,9 +8,11 @@ from typing import Optional
 
 from src import db
 from src.hypervisor_plugin import get_hypervisor_plugin
+from src.api.admin_endpoints import router as admin_router
 
 logger = logging.getLogger(__name__)
 app = FastAPI(title="VM Manager API")
+app.include_router(admin_router)
 
 # Configuration
 MAX_FAILED_AUTH = int(os.getenv("MAX_FAILED_AUTH", 3))
